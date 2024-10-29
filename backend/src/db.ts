@@ -1,7 +1,7 @@
 import sqlite3 from 'sqlite3';
-const db = new sqlite3.Database(':memory:');
 import { type PersistedPassword } from './pass.js';
 
+export const db = new sqlite3.Database(':memory:');
 export async function insertUser(
   name: string,
   email: string,
@@ -78,12 +78,10 @@ function formatDegree(degree: number): string {
 
 export async function getFriendsNetwork(
   userId: number,
+  maxDegree: number = 3,
 ): Promise<Array<{ name: string; email: string; degree: string }>> {
   return new Promise((resolve, reject) => {
-    // This query is used to find the friends network of a user.
-    // It uses a recursive CTE to find all friends of the user and their degrees.
-    // The degree is the number of steps away from the user in the friendship network.
-    // The temp visited column is used to avoid cycles in the network.
+    // This query finds the friends network of a user up to the specified degree.
     const query = `
       WITH RECURSIVE
       friend_network(user_id, friend_id, degree, visited) AS (
@@ -96,7 +94,7 @@ export async function getFriendsNetwork(
         SELECT f.user_id, f.friend_id, fn.degree + 1, fn.visited || f.friend_id || ','
         FROM friendship f
         JOIN friend_network fn ON f.user_id = fn.friend_id
-        WHERE fn.degree < 3 AND INSTR(fn.visited, ',' || f.friend_id || ',') = 0
+        WHERE fn.degree < ? AND INSTR(fn.visited, ',' || f.friend_id || ',') = 0
       )
       SELECT u.name, u.email, MIN(fn.degree) AS degree
       FROM friend_network fn
@@ -104,7 +102,7 @@ export async function getFriendsNetwork(
       GROUP BY fn.friend_id
     `;
 
-    db.all(query, [userId], (err, rows) => {
+    db.all(query, [userId, maxDegree], (err, rows) => {
       if (err) reject(err);
       else {
         const friends = rows.map(
