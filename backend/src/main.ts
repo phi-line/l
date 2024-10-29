@@ -1,6 +1,7 @@
 import express from 'express';
 import cookieSession from 'cookie-session';
 import cors from 'cors';
+import { z } from 'zod';
 import {
   insertUser,
   getUserByEmail,
@@ -24,8 +25,6 @@ app.use(
   cookieSession({
     name: 'session',
     keys: ['key1', 'key2'],
-
-    // Cookie Options
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
   }),
 );
@@ -41,41 +40,40 @@ app.get('/', (_, res) => {
   res.send('Welcome to the Dinosaur API!');
 });
 
-type RequestBody = {
-  name: string;
-  email: string;
-  password: string;
-};
+const registerSchema = z.object({
+  name: z.string().refine(validateName, { message: 'Invalid name' }),
+  email: z.string().refine(validateEmail, { message: 'Invalid email' }),
+  password: z
+    .string()
+    .min(8, { message: 'Password must be at least 8 characters long' }),
+});
 
 /**
  * Register a new user
  * @route POST /v1/auth/register
- * @param {Request} req - The request object
- * @param {Response} res - The response object
  */
 app.post('/v1/auth/register', async (req, res) => {
-  const body = req.body as unknown as RequestBody;
-  console.debug('User registration', body);
-
-  if (!validateName(body.name) || !validateEmail(body.email)) {
-    return res.status(400).send('Invalid name or email');
+  const parseResult = registerSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json(parseResult.error.format());
   }
+  const { name, email, password } = parseResult.data;
+
+  console.debug('User registration', { name, email, password }); // TODO: Remove password from logs! Used for demo purposes only!
 
   // Check if the user already exists
   try {
-    const existingUser = await getUserByEmail(body.email);
+    const existingUser = await getUserByEmail(email);
     if (existingUser) {
       console.error('User already exists', existingUser);
-      return res.status(400).send('Invalid name or email');
+      return res.status(400).send('User already exists');
     }
   } catch (error) {
     console.error('Error checking if user exists:', error);
     return res.status(500).send('Internal server error');
   }
 
-  const hashedPassword = await generateHashPassword(body.password);
-  console.debug('hash', hashedPassword);
-  const { name, email } = body;
+  const hashedPassword = await generateHashPassword(password);
   insertUser(name, email, hashedPassword);
 
   try {
@@ -89,17 +87,21 @@ app.post('/v1/auth/register', async (req, res) => {
   res.status(200).send('User registered and logged in successfully');
 });
 
+const loginSchema = z.object({
+  email: z.string().refine(validateEmail, { message: 'Invalid email' }),
+  password: z.string(),
+});
+
 /**
  * Login to an existing account
  * @route POST /v1/auth/login
- * @param {Request} req - The request object
- * @param {Response} res - The response object
  */
 app.post('/v1/auth/login', async (req, res) => {
-  const { email, password: passwordAttempt } = req.body as {
-    email: string;
-    password: string;
-  };
+  const parseResult = loginSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json(parseResult.error.format());
+  }
+  const { email, password: passwordAttempt } = parseResult.data;
 
   // Fetch user from the database
   let user;
@@ -140,8 +142,6 @@ app.post('/v1/auth/login', async (req, res) => {
 /**
  * Retrieve profile data for the authenticated user
  * @route GET /v1/profile
- * @param {Request} req - The request object
- * @param {Response} res - The response object
  */
 app.get('/v1/profile', async (req, res) => {
   if (!req.session || !req.session.user) {
@@ -167,14 +167,20 @@ app.get('/v1/profile', async (req, res) => {
   });
 });
 
+const addFriendSchema = z.object({
+  friendEmail: z.string().refine(validateEmail, { message: 'Invalid email' }),
+});
+
 /**
  * Add a friend
  * @route POST /v1/friends/add
- * @param {Request} req - The request object
- * @param {Response} res - The response object
  */
 app.post('/v1/friends/add', async (req, res) => {
-  const { friendEmail } = req.body;
+  const parseResult = addFriendSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json(parseResult.error.format());
+  }
+  const { friendEmail } = parseResult.data;
   const userEmail = req.session.user.email;
 
   let user;
@@ -204,8 +210,6 @@ app.post('/v1/friends/add', async (req, res) => {
 /**
  * Get friends network
  * @route GET /v1/friends
- * @param {Request} req - The request object
- * @param {Response} res - The response object
  */
 app.get('/v1/friends', async (req, res) => {
   const userEmail = req.session.user.email;

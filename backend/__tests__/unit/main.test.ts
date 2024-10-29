@@ -71,7 +71,10 @@ describe('API Endpoints', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.data).toBe('Invalid name or email');
+    expect(response.data).toEqual({
+      _errors: [],
+      name: { _errors: ['Invalid name'] },
+    });
   });
 
   it('should return 400 for too long email during registration', async () => {
@@ -87,7 +90,10 @@ describe('API Endpoints', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.data).toBe('Invalid name or email');
+    expect(response.data).toEqual({
+      _errors: [],
+      email: { _errors: ['Invalid email'] },
+    });
   });
 
   it('should return 400 for invalid email during registration', async () => {
@@ -103,7 +109,10 @@ describe('API Endpoints', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.data).toBe('Invalid name or email');
+    expect(response.data).toEqual({
+      _errors: [],
+      email: { _errors: ['Invalid email'] },
+    });
   });
 
   it('should login with the same user credentials', async () => {

@@ -42,7 +42,8 @@
     "fetch-cookie": "^3.0.1",
     "node-fetch": "^3.3.2",
     "sqlite3": "^5.1.7",
-    "tslib": "~2.7"
+    "tslib": "~2.7",
+    "zod": "^3.23.8"
   },
   "volta": {
     "node": "20.17.0"
