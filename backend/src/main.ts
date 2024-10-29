@@ -47,7 +47,12 @@ type RequestBody = {
   password: string;
 };
 
-// Register a new user
+/**
+ * Register a new user
+ * @route POST /v1/auth/register
+ * @param {Request} req - The request object
+ * @param {Response} res - The response object
+ */
 app.post('/v1/auth/register', async (req, res) => {
   const body = req.body as unknown as RequestBody;
   console.debug('User registration', body);
@@ -84,7 +89,12 @@ app.post('/v1/auth/register', async (req, res) => {
   res.status(200).send('User registered and logged in successfully');
 });
 
-// Login to an existing account
+/**
+ * Login to an existing account
+ * @route POST /v1/auth/login
+ * @param {Request} req - The request object
+ * @param {Response} res - The response object
+ */
 app.post('/v1/auth/login', async (req, res) => {
   const { email, password: passwordAttempt } = req.body as {
     email: string;
@@ -127,7 +137,12 @@ app.post('/v1/auth/login', async (req, res) => {
   res.status(200).send('User logged in successfully');
 });
 
-// Retrieve profile data for the authenticated user
+/**
+ * Retrieve profile data for the authenticated user
+ * @route GET /v1/profile
+ * @param {Request} req - The request object
+ * @param {Response} res - The response object
+ */
 app.get('/v1/profile', async (req, res) => {
   if (!req.session || !req.session.user) {
     return res.status(401).send('Unauthorized');
@@ -152,7 +167,12 @@ app.get('/v1/profile', async (req, res) => {
   });
 });
 
-// Add a friend
+/**
+ * Add a friend
+ * @route POST /v1/friends/add
+ * @param {Request} req - The request object
+ * @param {Response} res - The response object
+ */
 app.post('/v1/friends/add', async (req, res) => {
   const { friendEmail } = req.body;
   const userEmail = req.session.user.email;
@@ -181,7 +201,12 @@ app.post('/v1/friends/add', async (req, res) => {
   }
 });
 
-// Get friends network
+/**
+ * Get friends network
+ * @route GET /v1/friends
+ * @param {Request} req - The request object
+ * @param {Response} res - The response object
+ */
 app.get('/v1/friends', async (req, res) => {
   const userEmail = req.session.user.email;
 

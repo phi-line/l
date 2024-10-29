@@ -2,6 +2,14 @@ import sqlite3 from 'sqlite3';
 import { type PersistedPassword } from './pass.js';
 
 export const db = new sqlite3.Database(':memory:'); // For demo purposes, use an in-memory database. In a production environment, we should use a sidecar / hosted DB
+
+/**
+ * Inserts a new user into the database.
+ * @param {string} name - The name of the user.
+ * @param {string} email - The email of the user.
+ * @param {PersistedPassword} passwordHash - The hashed password information.
+ * @returns {Promise<void>}
+ */
 export async function insertUser(
   name: string,
   email: string,
@@ -20,6 +28,11 @@ export async function insertUser(
   });
 }
 
+/**
+ * Retrieves a user from the database by their email.
+ * @param {string} email - The email of the user.
+ * @returns {Promise<{id: number, name: string, email: string, password_hash: string, password_salt: string, password_iterations: number} | null>}
+ */
 export async function getUserByEmail(email: string): Promise<{
   id: number;
   name: string;
@@ -53,6 +66,12 @@ export async function getUserByEmail(email: string): Promise<{
   });
 }
 
+/**
+ * Adds a friend relationship between two users.
+ * @param {number} userId - The ID of the user.
+ * @param {number} friendId - The ID of the friend.
+ * @returns {Promise<void>}
+ */
 export async function addFriend(
   userId: number,
   friendId: number,
@@ -69,6 +88,11 @@ export async function addFriend(
   });
 }
 
+/**
+ * Formats the degree of friendship.
+ * @param {number} degree - The degree of friendship.
+ * @returns {string} - The formatted degree.
+ */
 function formatDegree(degree: number): string {
   if (degree === 1) return '1st';
   if (degree === 2) return '2nd';
@@ -76,6 +100,12 @@ function formatDegree(degree: number): string {
   return `${degree}th`;
 }
 
+/**
+ * Retrieves the friends network of a user up to a specified degree.
+ * @param {number} userId - The ID of the user.
+ * @param {number} [maxDegree=3] - The maximum degree of friendship to retrieve.
+ * @returns {Promise<Array<{name: string, email: string, degree: string}>>}
+ */
 export async function getFriendsNetwork(
   userId: number,
   maxDegree: number = 3,
