@@ -8,6 +8,7 @@ import {
   getFriendsNetwork,
 } from './db.js';
 import { generateHashPassword, verifyPassword } from './pass.js';
+import { validateName, validateEmail } from './user.js';
 
 const app = express();
 app.use(express.json());
@@ -51,8 +52,21 @@ app.post('/v1/auth/register', async (req, res) => {
   const body = req.body as unknown as RequestBody;
   console.debug('User registration', body);
 
-  // Needs string max length validation
-  // Needs email format validation
+  if (!validateName(body.name) || !validateEmail(body.email)) {
+    return res.status(400).send('Invalid name or email');
+  }
+
+  // Check if the user already exists
+  try {
+    const existingUser = await getUserByEmail(body.email);
+    if (existingUser) {
+      console.error('User already exists', existingUser);
+      return res.status(400).send('Invalid name or email');
+    }
+  } catch (error) {
+    console.error('Error checking if user exists:', error);
+    return res.status(500).send('Internal server error');
+  }
 
   const hashedPassword = await generateHashPassword(body.password);
   console.debug('hash', hashedPassword);
@@ -78,7 +92,13 @@ app.post('/v1/auth/login', async (req, res) => {
   };
 
   // Fetch user from the database
-  const user = await getUserByEmail(email);
+  let user;
+  try {
+    user = await getUserByEmail(email);
+  } catch (error) {
+    console.error('Error retrieving user by email:', error);
+    return res.status(500).send('Internal server error');
+  }
   if (!user) {
     return res.status(401).send('Invalid email or password');
   }
@@ -115,20 +135,21 @@ app.get('/v1/profile', async (req, res) => {
 
   const { email } = req.session.user;
 
+  let user;
   try {
-    const user = await getUserByEmail(email);
+    user = await getUserByEmail(email);
     if (!user) {
       return res.status(404).send('User not found');
     }
-
-    res.status(200).json({
-      email: user.email,
-      name: user.name,
-    });
   } catch (error) {
-    console.error('Error retrieving user profile:', error);
-    res.status(500).send('Internal server error');
+    console.error('Error retrieving user by email:', error);
+    return res.status(500).send('Internal server error');
   }
+
+  res.status(200).json({
+    email: user.email,
+    name: user.name,
+  });
 });
 
 // Add a friend
@@ -136,9 +157,17 @@ app.post('/v1/friends/add', async (req, res) => {
   const { friendEmail } = req.body;
   const userEmail = req.session.user.email;
 
+  let user;
   try {
-    const user = await getUserByEmail(userEmail);
-    const friend = await getUserByEmail(friendEmail);
+    user = await getUserByEmail(userEmail);
+  } catch (error) {
+    console.error('Error retrieving user by email:', error);
+    return res.status(500).send('Internal server error');
+  }
+
+  let friend;
+  try {
+    friend = await getUserByEmail(friendEmail);
 
     if (!user || !friend) {
       return res.status(404).send('User or friend not found');
@@ -156,18 +185,19 @@ app.post('/v1/friends/add', async (req, res) => {
 app.get('/v1/friends', async (req, res) => {
   const userEmail = req.session.user.email;
 
+  let user;
   try {
-    const user = await getUserByEmail(userEmail);
+    user = await getUserByEmail(userEmail);
     if (!user) {
       return res.status(404).send('User not found');
     }
-
-    const friendsNetwork = await getFriendsNetwork(user.id);
-    res.status(200).json(friendsNetwork);
   } catch (error) {
-    console.error('Error retrieving friends network:', error);
-    res.status(500).send('Internal server error');
+    console.error('Error retrieving user by email:', error);
+    return res.status(500).send('Internal server error');
   }
+
+  const friendsNetwork = await getFriendsNetwork(user.id);
+  res.status(200).json(friendsNetwork);
 });
 
 app.listen(8000);

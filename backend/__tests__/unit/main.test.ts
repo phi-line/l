@@ -1,15 +1,16 @@
-import { describe, it, beforeAll, afterAll, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fetch from 'node-fetch';
 import fetchCookie from 'fetch-cookie';
 
 // Utility function to generate random strings
-const generateRandomString = (length: number) =>
+const generateRandomString = (length: number): string =>
   Math.random()
     .toString(36)
     .substring(2, 2 + length);
 
 // Utility function to generate random emails
-const generateRandomEmail = () => `user${generateRandomString(5)}@example.com`;
+const generateRandomEmail = (): string =>
+  `user${generateRandomString(5)}@example.com`;
 
 describe('API Endpoints', () => {
   // Requires server to be running
@@ -17,9 +18,11 @@ describe('API Endpoints', () => {
 
   const request = async (
     url: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options: any = {},
     fetchWithCookies = fetchCookie(fetch),
-  ) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<{ status: number; data: string; context: any }> => {
     const response = await fetchWithCookies(`${baseURL}${url}`, {
       ...options,
       headers: {
@@ -53,6 +56,54 @@ describe('API Endpoints', () => {
 
     expect(response.status).toBe(200);
     expect(response.data).toBe('User registered and logged in successfully');
+  });
+
+  it('should return 400 for invalid name during registration', async () => {
+    const userData = {
+      name: 'A'.repeat(51), // Invalid name, exceeds MAX_NAME_LENGTH
+      email: generateRandomEmail(),
+      password: generateRandomString(10),
+    };
+
+    const response = await request('/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.data).toBe('Invalid name or email');
+  });
+
+  it('should return 400 for too long email during registration', async () => {
+    const userData = {
+      name: `Test User ${generateRandomString(5)}`,
+      email: 'a@.com'.repeat(101), // Invalid email format
+      password: generateRandomString(10),
+    };
+
+    const response = await request('/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.data).toBe('Invalid name or email');
+  });
+
+  it('should return 400 for invalid email during registration', async () => {
+    const userData = {
+      name: `Test User ${generateRandomString(5)}`,
+      email: 'invalid-email', // Invalid email format
+      password: generateRandomString(10),
+    };
+
+    const response = await request('/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.data).toBe('Invalid name or email');
   });
 
   it('should login with the same user credentials', async () => {

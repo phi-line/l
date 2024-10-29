@@ -5,8 +5,8 @@ import {
   getFriendsNetwork,
   getUserByEmail,
   db,
-} from '../../src/db';
-import { type PersistedPassword } from '../../src/pass';
+} from '../../src/db.js';
+import { type PersistedPassword } from '../../src/pass.js';
 
 describe('Degrees of Friendships', () => {
   let userId1: number;

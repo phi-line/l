@@ -1,7 +1,7 @@
 import sqlite3 from 'sqlite3';
 import { type PersistedPassword } from './pass.js';
 
-export const db = new sqlite3.Database(':memory:');
+export const db = new sqlite3.Database(':memory:'); // For demo purposes, use an in-memory database. In a production environment, we should use a sidecar / hosted DB
 export async function insertUser(
   name: string,
   email: string,
