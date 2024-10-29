@@ -1,8 +1,7 @@
-// @deno-types="npm:@types/express@4.17.15"
-import express from 'npm:express@4.18.2';
-import { crypto } from 'jsr:@std/crypto';
-import cookieSession from 'npm:cookie-session';
-import { insertUser } from './db.ts';
+import * as crypto from 'crypto';
+import express from 'express';
+import cookieSession from 'cookie-session';
+import { insertUser } from './db.js';
 
 const app = express();
 app.use(express.json());
@@ -20,15 +19,10 @@ app.get('/', (_, res) => {
   res.send('Welcome to the Dinosaur API!');
 });
 
-const hashPassword = async (password: string) => {
-  const encoder = new TextEncoder();
-  const encodedPassword = encoder.encode(password);
-
-  const decoder = new TextDecoder();
-  const hashedArray = await crypto.subtle.digest('SHA-256', encodedPassword);
-  const hashString = decoder.decode(hashedArray);
-
-  return hashString;
+const hashPassword = async (password: string): Promise<string> => {
+  const hash = crypto.createHash('sha256');
+  hash.update(password);
+  return hash.digest('hex');
 };
 
 type RequestBody = {
@@ -51,20 +45,19 @@ app.post('/v1/auth/register', async (req, res) => {
   const { name, email } = body;
   insertUser(name, email, hashedPassword);
 
-  // @ts-ignore
   res.session.nowInMinutes = Math.floor(Date.now() / 60e3);
 
   res.status(200).send('User registered successfully');
 });
 
 // Login to an existing account
-app.post('/v1/auth/login', (req, res) => {
+app.post('/v1/auth/login', (_, res) => {
   // Logic to authenticate a user
   res.status(200).send('User logged in successfully');
 });
 
 // Retrieve profile data for the authenticated user
-app.get('/v1/profile', (req, res) => {
+app.get('/v1/profile', (_, res) => {
   // Logic to retrieve user profile
   res.status(200).json({
     email: 'user@example.com',

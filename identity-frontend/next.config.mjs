@@ -16,7 +16,7 @@ const nextConfig = {
   },
   reactStrictMode: true,
   env: {
-    NEXT_PUBLIC_API_ORIGIN: '/',
+    NEXT_PUBLIC_API_ORIGIN: 'http://localhost:8000',
   },
 };
 
