@@ -8,10 +8,16 @@ export async function insertUser(
   passwordHash: PersistedPassword,
 ): Promise<void> {
   const { hash, salt, iterations } = passwordHash;
-  await db.run(
-    'INSERT INTO user (name, email, password_hash, password_salt, password_iterations) VALUES (?, ?, ?, ?, ?)',
-    [name, email, hash, salt, iterations],
-  );
+  await new Promise<void>((resolve, reject) => {
+    db.run(
+      'INSERT INTO user (name, email, password_hash, password_salt, password_iterations) VALUES (?, ?, ?, ?, ?)',
+      [name, email, hash, salt, iterations],
+      (err) => {
+        if (err) reject(err);
+        else resolve();
+      },
+    );
+  });
 }
 
 export async function getUserByEmail(email: string): Promise<{
@@ -47,67 +53,91 @@ export async function getUserByEmail(email: string): Promise<{
   });
 }
 
+export async function addFriend(
+  userId: number,
+  friendId: number,
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    db.run(
+      'INSERT INTO friendship (user_id, friend_id) VALUES (?, ?)',
+      [userId, friendId],
+      (err) => {
+        if (err) reject(err);
+        else resolve();
+      },
+    );
+  });
+}
+
+function formatDegree(degree: number): string {
+  if (degree === 1) return '1st';
+  if (degree === 2) return '2nd';
+  if (degree === 3) return '3rd';
+  return `${degree}th`;
+}
+
+export async function getFriendsNetwork(
+  userId: number,
+): Promise<Array<{ name: string; email: string; degree: string }>> {
+  return new Promise((resolve, reject) => {
+    // This query is used to find the friends network of a user.
+    // It uses a recursive CTE to find all friends of the user and their degrees.
+    // The degree is the number of steps away from the user in the friendship network.
+    // The temp visited column is used to avoid cycles in the network.
+    const query = `
+      WITH RECURSIVE
+      friend_network(user_id, friend_id, degree, visited) AS (
+        SELECT user_id, friend_id, 1 AS degree, ',' || user_id || ',' || friend_id || ',' AS visited
+        FROM friendship
+        WHERE user_id = ?
+
+        UNION ALL
+
+        SELECT f.user_id, f.friend_id, fn.degree + 1, fn.visited || f.friend_id || ','
+        FROM friendship f
+        JOIN friend_network fn ON f.user_id = fn.friend_id
+        WHERE fn.degree < 3 AND INSTR(fn.visited, ',' || f.friend_id || ',') = 0
+      )
+      SELECT u.name, u.email, MIN(fn.degree) AS degree
+      FROM friend_network fn
+      JOIN user u ON fn.friend_id = u.id
+      GROUP BY fn.friend_id
+    `;
+
+    db.all(query, [userId], (err, rows) => {
+      if (err) reject(err);
+      else {
+        const friends = rows.map(
+          (row: { name: string; email: string; degree: number }) => ({
+            name: row.name,
+            email: row.email,
+            degree: formatDegree(row.degree),
+          }),
+        );
+        resolve(friends);
+      }
+    });
+  });
+}
+
 // Open a database
 db.exec(`
   CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    email TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     password_salt TEXT NOT NULL,
     password_iterations INTEGER NOT NULL
   )
 `);
 
-// Insert test data into user table
-for (const {
-  name,
-  email,
-  password_hash,
-  password_salt,
-  password_iterations,
-} of [
-  {
-    name: 'Abby',
-    email: 'peter.parker@example.com',
-    password_hash: 'hash1',
-    password_salt: 'salt1',
-    password_iterations: 10000,
-  },
-  {
-    name: 'Barry',
-    email: 'clark.kent@example.com',
-    password_hash: 'hash2',
-    password_salt: 'salt2',
-    password_iterations: 10000,
-  },
-  {
-    name: 'Charlie',
-    email: 'bruce.wayne@example.com',
-    password_hash: 'hash3',
-    password_salt: 'salt3',
-    password_iterations: 10000,
-  },
-]) {
-  db.run(
-    'INSERT INTO user (name, email, password_hash, password_salt, password_iterations) VALUES (?, ?, ?, ?, ?)',
-    [name, email, password_hash, password_salt, password_iterations],
-  );
-}
-
-// Verify data in user table
-db.each(
-  'SELECT id, name, email, password_hash FROM user',
-  (
-    err,
-    row: { id: string; name: string; email: string; password_hash: string },
-  ) => {
-    if (err) {
-      throw err;
-    }
-    console.log('Printing test data');
-    console.log(
-      `ID: ${row.id}, Name: ${row.name}, Email: ${row.email}, Password Hash: ${row.password_hash}`,
-    );
-  },
-);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS friendship (
+    user_id INTEGER NOT NULL,
+    friend_id INTEGER NOT NULL,
+    PRIMARY KEY (user_id, friend_id),
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    FOREIGN KEY (friend_id) REFERENCES user(id)
+  )
+`);

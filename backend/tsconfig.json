@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
+    "module": "NodeNext",
     "target": "ESNext",
     "noEmit": false,
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "rootDir": ".",
     "outDir": "build",
     "allowSyntheticDefaultImports": true,

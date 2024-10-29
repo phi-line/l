@@ -1,7 +1,7 @@
 {
-  "name": "node-typescript-boilerplate",
+  "name": "identity-backend",
   "version": "0.0.0",
-  "description": "Minimalistic boilerplate to quick-start Node.js development in TypeScript.",
+  "description": "Backend that supports identity and friends system",
   "type": "module",
   "engines": {
     "node": ">= 20.9 < 21"

@@ -1,7 +1,12 @@
 import express from 'express';
 import cookieSession from 'cookie-session';
 import cors from 'cors';
-import { insertUser, getUserByEmail } from './db.js';
+import {
+  insertUser,
+  getUserByEmail,
+  addFriend,
+  getFriendsNetwork,
+} from './db.js';
 import { generateHashPassword, verifyPassword } from './pass.js';
 
 const app = express();
@@ -122,6 +127,45 @@ app.get('/v1/profile', async (req, res) => {
     });
   } catch (error) {
     console.error('Error retrieving user profile:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+// Add a friend
+app.post('/v1/friends/add', async (req, res) => {
+  const { friendEmail } = req.body;
+  const userEmail = req.session.user.email;
+
+  try {
+    const user = await getUserByEmail(userEmail);
+    const friend = await getUserByEmail(friendEmail);
+
+    if (!user || !friend) {
+      return res.status(404).send('User or friend not found');
+    }
+
+    await addFriend(user.id, friend.id);
+    res.status(200).send('Friend added successfully');
+  } catch (error) {
+    console.error('Error adding friend:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+// Get friends network
+app.get('/v1/friends', async (req, res) => {
+  const userEmail = req.session.user.email;
+
+  try {
+    const user = await getUserByEmail(userEmail);
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    const friendsNetwork = await getFriendsNetwork(user.id);
+    res.status(200).json(friendsNetwork);
+  } catch (error) {
+    console.error('Error retrieving friends network:', error);
     res.status(500).send('Internal server error');
   }
 });
