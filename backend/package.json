@@ -11,6 +11,7 @@
     "@types/eslint__js": "~8.42",
     "@types/node": "~20",
     "@typescript-eslint/parser": "~8.5",
+    "@vitest/eslint-plugin": "~1.1",
     "eslint": "~9.10",
     "eslint-config-prettier": "~9.1",
     "globals": "~15.9",
@@ -36,6 +37,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "cookie-session": "^2.1.0",
+    "cors": "^2.8.5",
     "express": "^4.21.1",
     "fetch-cookie": "^3.0.1",
     "node-fetch": "^3.3.2",

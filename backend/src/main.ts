@@ -1,12 +1,18 @@
 import express from 'express';
 import cookieSession from 'cookie-session';
+import cors from 'cors';
 import { insertUser, getUserByEmail } from './db.js';
 import { generateHashPassword, verifyPassword } from './pass.js';
 
 const app = express();
 app.use(express.json());
 
-app.set('trust proxy', 1); // If you're behind a proxy (e.g., Heroku, AWS ELB)
+app.use(
+  cors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+  }),
+);
 
 app.use(
   cookieSession({

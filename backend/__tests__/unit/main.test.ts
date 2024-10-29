@@ -1,10 +1,11 @@
-import { describe, it, beforeAll, afterAll, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fetch from 'node-fetch';
 import fetchCookie from 'fetch-cookie';
 
 const fetchWithCookies = fetchCookie(fetch);
 
 describe('API Endpoints', () => {
+  // Requires server to be running
   const baseURL = 'http://localhost:8000';
 
   const request = async (url: string, options: any = {}) => {
